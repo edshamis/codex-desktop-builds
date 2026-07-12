@@ -59,9 +59,9 @@ The cache is intentionally not bootstrapped from CI. Once per cache/account:
 3. Add the cache URL and public signing key to the NixOS repository under
    `lib/cachix/`.
 
-Without the secret, CI still verifies the build but reports that publication
-was skipped. Do not update the NixOS consumer to such a commit unless the same
-store path is available from another trusted substituter.
+Without the secret, trusted build jobs fail before doing expensive work. This
+makes a green `main` revision a reliable signal that the exact package was
+published. Do not update the NixOS consumer to a red commit.
 
 ## Scope and trust
 

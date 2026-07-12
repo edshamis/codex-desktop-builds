@@ -37,8 +37,19 @@ jobs:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v31
 
+      - name: Require Cachix publication credentials
+        if: env.CACHIX_AUTH_TOKEN == ''
+        run: |
+          cat <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          ## Cachix publication unavailable
+
+          `CACHIX_AUTH_TOKEN` is not configured. Trusted builds fail closed so
+          a green `main` revision always means its exact package was published
+          and is safe for the NixOS consumer to pin.
+          EOF
+          exit 1
+
       - name: Configure Cachix for push
-        if: env.CACHIX_AUTH_TOKEN != ''
         uses: cachix/cachix-action@v17
         with:
           name: ${{ env.CACHIX_CACHE_NAME }}
@@ -53,17 +64,6 @@ jobs:
             --print-build-logs \
             --max-jobs 1
 
-      - name: Report missing cache credentials
-        if: env.CACHIX_AUTH_TOKEN == ''
-        run: |
-          cat <<'EOF' >> "$GITHUB_STEP_SUMMARY"
-          ## Cachix publication skipped
-
-          The build passed, but `CACHIX_AUTH_TOKEN` is not configured. Create
-          the `edshamis-codex-desktop` cache and add its write token as a
-          repository Actions secret before treating this commit as consumable.
-          EOF
-
       - name: Record package metadata
         run: |
           {
@@ -71,5 +71,5 @@ jobs:
             echo
             echo '- Output: `.#codex-desktop-full`'
             echo "- Revision: \`${GITHUB_SHA}\`"
-            echo "- Cachix publication: \`${{ env.CACHIX_AUTH_TOKEN != '' }}\`"
+            echo '- Cachix publication: `true`'
           } >> "$GITHUB_STEP_SUMMARY"
