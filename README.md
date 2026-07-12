@@ -46,22 +46,23 @@ nix run .#codex-desktop-full -- --new-instance
 6. Keep the prior consumer revision until the new app is verified.
 
 Pull requests evaluate the flake but do not receive the Cachix write token or
-run the expensive package build. Trusted pushes to `main` and manual workflow
-dispatches perform the build.
+run the expensive package build. Trusted pushes to `main` build only when
+`flake.nix` or `flake.lock` changes; manual dispatches always rebuild. Policy and
+documentation-only commits therefore stay cheap.
 
-## Cachix bootstrap
+## Cachix
 
-The cache is intentionally not bootstrapped from CI. Once per cache/account:
+The public cache is `edshamis-codex-desktop`. Consumers trust:
 
-1. Create the public open-source cache `edshamis-codex-desktop` in Cachix.
-2. Add its write token to this repository as the Actions secret
-   `CACHIX_AUTH_TOKEN`.
-3. Add the cache URL and public signing key to the NixOS repository under
-   `lib/cachix/`.
+```text
+edshamis-codex-desktop.cachix.org-1:yQDKt7Oie5jugFEattyZNF7GGe944Anj5fknyjhItCk=
+```
 
-Without the secret, trusted build jobs fail before doing expensive work. This
-makes a green `main` revision a reliable signal that the exact package was
-published. Do not update the NixOS consumer to a red commit.
+The per-cache write token is stored only as the repository Actions secret
+`CACHIX_AUTH_TOKEN`. Rotate it from the cache's Cachix settings and replace that
+secret directly; never put it in Git or logs. If the secret is absent, a package
+change fails before doing expensive work. This makes a green package-changing
+`main` revision a reliable signal that its exact output was published.
 
 ## Scope and trust
 

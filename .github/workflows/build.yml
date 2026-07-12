@@ -24,7 +24,7 @@ jobs:
     name: Evaluate flake
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: cachix/install-nix-action@v31
       - run: nix flake check --no-build --print-build-logs
 
@@ -34,11 +34,31 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: cachix/install-nix-action@v31
 
+      - name: Detect package changes
+        id: package_changes
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+
+          changed=true
+          if [[ "$EVENT_NAME" == push && "$BEFORE_SHA" != 0000000000000000000000000000000000000000 ]] \
+            && git cat-file -e "$BEFORE_SHA^{commit}"; then
+            if git diff --quiet "$BEFORE_SHA" "$CURRENT_SHA" -- flake.nix flake.lock; then
+              changed=false
+            fi
+          fi
+          printf 'changed=%s\n' "$changed" >> "$GITHUB_OUTPUT"
+
       - name: Require Cachix publication credentials
-        if: env.CACHIX_AUTH_TOKEN == ''
+        if: steps.package_changes.outputs.changed == 'true' && env.CACHIX_AUTH_TOKEN == ''
         run: |
           cat <<'EOF' >> "$GITHUB_STEP_SUMMARY"
           ## Cachix publication unavailable
@@ -50,12 +70,14 @@ jobs:
           exit 1
 
       - name: Configure Cachix for push
+        if: steps.package_changes.outputs.changed == 'true'
         uses: cachix/cachix-action@v17
         with:
           name: ${{ env.CACHIX_CACHE_NAME }}
           authToken: ${{ env.CACHIX_AUTH_TOKEN }}
 
       - name: Build exact package
+        if: steps.package_changes.outputs.changed == 'true'
         run: |
           set -euo pipefail
           nix build \
@@ -65,6 +87,7 @@ jobs:
             --max-jobs 1
 
       - name: Record package metadata
+        if: steps.package_changes.outputs.changed == 'true'
         run: |
           {
             echo '## Codex Desktop package'
@@ -72,4 +95,13 @@ jobs:
             echo '- Output: `.#codex-desktop-full`'
             echo "- Revision: \`${GITHUB_SHA}\`"
             echo '- Cachix publication: `true`'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Record unchanged package
+        if: steps.package_changes.outputs.changed != 'true'
+        run: |
+          {
+            echo '## Codex Desktop package'
+            echo
+            echo 'The pinned package inputs are unchanged; no build or Cachix write was needed.'
           } >> "$GITHUB_STEP_SUMMARY"
