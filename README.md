@@ -25,13 +25,13 @@ It enables Computer Use UI and the feature IDs centralized in `flake.nix`.
 Changing that list creates a new derivation without changing the consumer-facing
 output name.
 
-The current source is temporarily pinned to the immutable fork commit for
-[`ilysenko/codex-desktop-linux#914`](https://github.com/ilysenko/codex-desktop-linux/pull/914),
-which adds popped-out Quick Chat zoom on top of the frameless-titlebar support
-merged in
-[`ilysenko/codex-desktop-linux#904`](https://github.com/ilysenko/codex-desktop-linux/pull/904).
-Once #914 lands upstream, replace the input URL with the upstream repository
-and refresh the lock.
+The current source is pinned to an immutable commit on the private-feature fork.
+That fork keeps `quick-chat-window-zoom` under the upstream-supported
+`linux-features/local/` extension boundary and enables it only through this
+flake's `linuxFeatureIds`. The customization sits on top of the frameless-titlebar
+support merged in
+[`ilysenko/codex-desktop-linux#904`](https://github.com/ilysenko/codex-desktop-linux/pull/904)
+without adding the workflow-specific zoom behavior to upstream core.
 
 Run the pinned package locally with:
 
@@ -41,7 +41,8 @@ nix run .#codex-desktop-full -- --new-instance
 
 ## Update workflow
 
-1. Update the upstream lock intentionally:
+1. Advance the immutable `codex-desktop-linux` source commit intentionally,
+   then refresh its lock:
 
    ```bash
    nix flake update codex-desktop-linux

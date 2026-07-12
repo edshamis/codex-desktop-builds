@@ -1,8 +1,8 @@
 {
   description = "Cached Codex Desktop Linux package for edshamis";
 
-  # Temporary unmerged fix: https://github.com/ilysenko/codex-desktop-linux/pull/914
-  inputs.codex-desktop-linux.url = "github:edshamis/codex-desktop-linux/328edf1ff37734d4993a7252b4e92b146d088db0";
+  # Private local-feature branch; keep this immutable and advance intentionally.
+  inputs.codex-desktop-linux.url = "github:edshamis/codex-desktop-linux/2c1f981ff53ae397fcd2b1448f8e6343f7a476aa";
 
   outputs = {
     self,
@@ -18,6 +18,7 @@
       "node-repl-reaper"
       "open-target-discovery"
       "persistent-status-panel"
+      "quick-chat-window-zoom"
     ];
 
     codexDesktopFull = codex-desktop-linux.packages.${system}.codex-desktop.override {
