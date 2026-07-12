@@ -26,10 +26,12 @@ Changing that list creates a new derivation without changing the consumer-facing
 output name.
 
 The current source is temporarily pinned to the immutable fork commit for
-[`ilysenko/codex-desktop-linux#904`](https://github.com/ilysenko/codex-desktop-linux/pull/904),
-which fixes popped-out Quick Chat zoom and applies the frameless titlebar to
-Quick Chat. Once that change lands upstream, replace the input URL with the
-upstream repository and refresh the lock.
+[`ilysenko/codex-desktop-linux#914`](https://github.com/ilysenko/codex-desktop-linux/pull/914),
+which adds popped-out Quick Chat zoom on top of the frameless-titlebar support
+merged in
+[`ilysenko/codex-desktop-linux#904`](https://github.com/ilysenko/codex-desktop-linux/pull/904).
+Once #914 lands upstream, replace the input URL with the upstream repository
+and refresh the lock.
 
 Run the pinned package locally with:
 

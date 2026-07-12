@@ -1,8 +1,8 @@
 {
   description = "Cached Codex Desktop Linux package for edshamis";
 
-  # Temporary unmerged fix: https://github.com/ilysenko/codex-desktop-linux/pull/904
-  inputs.codex-desktop-linux.url = "github:edshamis/codex-desktop-linux/12e09e43e3a0d2a53908e2734768f784794301dd";
+  # Temporary unmerged fix: https://github.com/ilysenko/codex-desktop-linux/pull/914
+  inputs.codex-desktop-linux.url = "github:edshamis/codex-desktop-linux/328edf1ff37734d4993a7252b4e92b146d088db0";
 
   outputs = {
     self,
