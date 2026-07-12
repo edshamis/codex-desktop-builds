@@ -1,0 +1,75 @@
+name: Build Codex Desktop
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codex-desktop-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CACHIX_CACHE_NAME: edshamis-codex-desktop
+  CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
+  NIX_CONFIG: experimental-features = nix-command flakes
+
+jobs:
+  evaluate:
+    name: Evaluate flake
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - run: nix flake check --no-build --print-build-logs
+
+  build:
+    name: Build and publish package
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+
+      - name: Configure Cachix for push
+        if: env.CACHIX_AUTH_TOKEN != ''
+        uses: cachix/cachix-action@v17
+        with:
+          name: ${{ env.CACHIX_CACHE_NAME }}
+          authToken: ${{ env.CACHIX_AUTH_TOKEN }}
+
+      - name: Build exact package
+        run: |
+          set -euo pipefail
+          nix build \
+            .#codex-desktop-full \
+            --no-link \
+            --print-build-logs \
+            --max-jobs 1
+
+      - name: Report missing cache credentials
+        if: env.CACHIX_AUTH_TOKEN == ''
+        run: |
+          cat <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          ## Cachix publication skipped
+
+          The build passed, but `CACHIX_AUTH_TOKEN` is not configured. Create
+          the `edshamis-codex-desktop` cache and add its write token as a
+          repository Actions secret before treating this commit as consumable.
+          EOF
+
+      - name: Record package metadata
+        run: |
+          {
+            echo '## Codex Desktop package'
+            echo
+            echo '- Output: `.#codex-desktop-full`'
+            echo "- Revision: \`${GITHUB_SHA}\`"
+            echo "- Cachix publication: \`${{ env.CACHIX_AUTH_TOKEN != '' }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
