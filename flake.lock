@@ -6,17 +6,17 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1783885811,
-        "narHash": "sha256-lJUeJuGMtsfou24xsQSdo6qYbB9p3eVV2luCClMIUwg=",
+        "lastModified": 1783916617,
+        "narHash": "sha256-AH8E89e1mJmwT5XfjUm5tRTgb0ZVMC2u+3uGUCwU2OE=",
         "owner": "edshamis",
         "repo": "codex-desktop-linux",
-        "rev": "2c1f981ff53ae397fcd2b1448f8e6343f7a476aa",
+        "rev": "2f38c1005cd66101f63294d158806cc5605893a4",
         "type": "github"
       },
       "original": {
         "owner": "edshamis",
         "repo": "codex-desktop-linux",
-        "rev": "2c1f981ff53ae397fcd2b1448f8e6343f7a476aa",
+        "rev": "2f38c1005cd66101f63294d158806cc5605893a4",
         "type": "github"
       }
     },
