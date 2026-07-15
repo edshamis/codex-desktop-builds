@@ -28,7 +28,10 @@ output name.
 The current source is pinned to an immutable commit on the private-feature fork.
 That fork keeps `quick-chat-window-zoom` under the upstream-supported
 `linux-features/local/` extension boundary and enables it only through this
-flake's `linuxFeatureIds`. The customization sits on top of the frameless-titlebar
+flake's `linuxFeatureIds`. It also enables the disabled-by-default
+`chatgpt-complete-history` repository feature so Quick Chat includes TPP phone
+and scheduled-run conversations and the ChatGPT project list is not collapsed
+to five entries. These customizations sit on top of the frameless-titlebar
 support merged in
 [`ilysenko/codex-desktop-linux#904`](https://github.com/ilysenko/codex-desktop-linux/pull/904)
 without adding the workflow-specific zoom behavior to upstream core.
