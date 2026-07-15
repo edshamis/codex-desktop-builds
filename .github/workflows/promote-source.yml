@@ -1,0 +1,206 @@
+name: Promote validated private source
+
+on:
+  schedule:
+    - cron: "47 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: codex-desktop-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CACHIX_CACHE_NAME: edshamis-codex-desktop
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  SOURCE_BRANCH: agent/private-quick-chat-window-zoom
+  SOURCE_REPOSITORY: edshamis/codex-desktop-linux
+
+jobs:
+  promote:
+    name: Build, cache, and promote source
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Test immutable source pin updater
+        run: node --test scripts/update-source-pin.test.js
+
+      - name: Detect a validated source update
+        id: source
+        env:
+          SOURCE_URL: https://github.com/${{ env.SOURCE_REPOSITORY }}.git
+        run: |
+          set -euo pipefail
+
+          current_sha="$(node scripts/update-source-pin.js --read)"
+          latest_sha="$(git ls-remote --exit-code "$SOURCE_URL" "refs/heads/${SOURCE_BRANCH}" | awk 'NR == 1 { print $1 }')"
+          if [[ ! "$latest_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "invalid private source branch commit: $latest_sha" >&2
+            exit 1
+          fi
+
+          echo "current_sha=$current_sha" >> "$GITHUB_OUTPUT"
+          echo "latest_sha=$latest_sha" >> "$GITHUB_OUTPUT"
+          if [[ "$current_sha" == "$latest_sha" ]]; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Require Cachix publication credentials
+        if: steps.source.outputs.changed == 'true'
+        env:
+          CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$CACHIX_AUTH_TOKEN" ]]; then
+            echo 'CACHIX_AUTH_TOKEN is required before promoting a package update.' >&2
+            exit 1
+          fi
+
+      - name: Install Nix
+        if: steps.source.outputs.changed == 'true'
+        uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            extra-substituters = https://edshamis-codex-desktop.cachix.org
+            extra-trusted-public-keys = edshamis-codex-desktop.cachix.org-1:yQDKt7Oie5jugFEattyZNF7GGe944Anj5fknyjhItCk=
+
+      - name: Advance the candidate source pin
+        if: steps.source.outputs.changed == 'true'
+        env:
+          SOURCE_SHA: ${{ steps.source.outputs.latest_sha }}
+        run: |
+          set -euo pipefail
+          node scripts/update-source-pin.js "$SOURCE_SHA"
+          nix flake update codex-desktop-linux
+
+      - name: Evaluate the candidate
+        if: steps.source.outputs.changed == 'true'
+        run: nix flake check --no-build --print-build-logs
+
+      - name: Build the exact candidate
+        if: steps.source.outputs.changed == 'true'
+        id: build
+        run: |
+          set -euo pipefail
+          output="$(nix build .#codex-desktop-full --no-link --print-out-paths --print-build-logs --max-jobs 1)"
+          if [[ "$output" == *$'\n'* || ! "$output" =~ ^/nix/store/ ]]; then
+            echo "unexpected build output: $output" >&2
+            exit 1
+          fi
+          echo "output=$output" >> "$GITHUB_OUTPUT"
+
+      - name: Validate the feature contract
+        if: steps.source.outputs.changed == 'true'
+        env:
+          OUTPUT_PATH: ${{ steps.build.outputs.output }}
+        run: |
+          set -euo pipefail
+          patch_report="$OUTPUT_PATH/opt/codex-desktop/.codex-linux/patch-report.json"
+          nix eval --json .#lib.linuxFeatureIds > expected-features.json
+          jq -e --slurpfile expected expected-features.json '
+            .enabledFeatures == $expected[0]
+            and any(
+              .patches[];
+              .name == "feature:quick-chat-window-zoom:quick-chat-window-zoom"
+              and .status == "applied"
+              and .sourceKind == "feature"
+            )
+          ' "$patch_report" >/dev/null
+
+      - name: Configure Cachix publication
+        if: steps.source.outputs.changed == 'true'
+        uses: cachix/cachix-action@v17
+        with:
+          name: ${{ env.CACHIX_CACHE_NAME }}
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Publish the complete closure to Cachix
+        if: steps.source.outputs.changed == 'true'
+        env:
+          OUTPUT_PATH: ${{ steps.build.outputs.output }}
+        run: cachix push "$CACHIX_CACHE_NAME" "$OUTPUT_PATH"
+
+      - name: Promote the cached source pin
+        if: steps.source.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ steps.source.outputs.latest_sha }}
+        run: |
+          set -euo pipefail
+
+          changed_files="$(git diff --name-only | sort)"
+          if [[ "$changed_files" != $'flake.lock\nflake.nix' ]]; then
+            echo "unexpected candidate files:" >&2
+            printf '%s\n' "$changed_files" >&2
+            exit 1
+          fi
+
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add flake.nix flake.lock
+          git diff --cached --check
+          git commit -m "Build Codex Desktop from ${SOURCE_SHA:0:7}"
+          auth_header="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic ${auth_header}" \
+            push origin HEAD:main
+
+      - name: Record promotion failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = "Automated Codex Desktop source promotion failed";
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              "The latest private source commit could not be built, validated, cached, or promoted.",
+              "",
+              `Workflow run: ${runUrl}`,
+              "",
+              "Builder `main`, the Cachix-backed profile, and the deployed app remain on the previous known-green package.",
+            ].join("\n");
+            const { data: issues } = await github.rest.issues.listForRepo({
+              ...context.repo,
+              state: "open",
+              per_page: 100,
+            });
+            const existing = issues.find((issue) => issue.title === title);
+            if (existing) {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: existing.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({ ...context.repo, title, body });
+            }
+
+      - name: Close resolved promotion failure
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = "Automated Codex Desktop source promotion failed";
+            const { data: issues } = await github.rest.issues.listForRepo({
+              ...context.repo,
+              state: "open",
+              per_page: 100,
+            });
+            const existing = issues.find((issue) => issue.title === title);
+            if (existing) {
+              await github.rest.issues.update({
+                ...context.repo,
+                issue_number: existing.number,
+                state: "closed",
+                state_reason: "completed",
+              });
+            }

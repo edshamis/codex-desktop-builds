@@ -30,9 +30,8 @@ That fork keeps `quick-chat-window-zoom` under the upstream-supported
 `linux-features/local/` extension boundary and enables it only through this
 flake's `linuxFeatureIds`. It also enables the disabled-by-default
 `chatgpt-complete-history` repository feature so Quick Chat includes TPP phone
-and scheduled-run conversations, groups full history under Scheduled and
-project headings, and keeps the ChatGPT project list fully expanded. These
-customizations sit on top of the frameless-titlebar support merged in
+and scheduled-run conversations without modifying the main Projects or
+Scheduled pages. These customizations sit on top of the frameless-titlebar support merged in
 [`ilysenko/codex-desktop-linux#904`](https://github.com/ilysenko/codex-desktop-linux/pull/904)
 without adding the workflow-specific zoom behavior to upstream core.
 
@@ -42,7 +41,25 @@ Run the pinned package locally with:
 nix run .#codex-desktop-full -- --new-instance
 ```
 
-## Update workflow
+## Automated update workflow
+
+The source fork merges `ilysenko/codex-desktop-linux:main` into its private
+feature branch every six hours and publishes that branch only after its focused
+feature tests, complete patcher suite, and Nix evaluation pass. This repository
+polls the validated branch 30 minutes later.
+
+For each new source commit, the promotion workflow updates a temporary exact
+pin, evaluates and builds `codex-desktop-full`, validates the enabled-feature
+and Quick Chat patch report, and explicitly publishes the complete closure to
+Cachix. Only then does it commit the new immutable pin to builder `main`. A
+failure leaves `main` and every consumer on the previous known-green package
+and updates one reusable issue.
+
+The dedicated Nix profile may therefore follow builder `main`: a visible
+builder revision is already built and cached, while its own contract validation
+and retained previous generation provide the final local rollback boundary.
+
+## Manual update workflow
 
 1. Advance the immutable `codex-desktop-linux` source commit intentionally,
    then refresh its lock:
@@ -52,14 +69,21 @@ nix run .#codex-desktop-full -- --new-instance
    ```
 
 2. Adjust `linuxFeatureIds` when the desired bundle changes.
+
 3. Run `nix flake check --no-build` locally.
-4. Push the change and wait for `Build Codex Desktop` to succeed on `main`.
+
+4. Push the change and wait for `Build Codex Desktop` to succeed on `main`, or
+   manually dispatch `Promote validated private source`.
+
 5. Runtime-smoke-test the package before advancing the NixOS consumer input.
+
 6. Keep the prior consumer revision until the new app is verified.
 
 Pull requests evaluate the flake but do not receive the Cachix write token or
 run the expensive package build. Trusted pushes to `main` build only when
-`flake.nix` or `flake.lock` changes; manual dispatches always rebuild. Policy and
+`flake.nix` or `flake.lock` changes; manual build dispatches always rebuild.
+Scheduled source promotion is also trusted, but commits only after its candidate
+has already been built, validated, and explicitly published. Policy and
 documentation-only commits therefore stay cheap.
 
 ## Cachix
