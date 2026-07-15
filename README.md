@@ -52,8 +52,17 @@ For each new source commit, the promotion workflow updates a temporary exact
 pin, evaluates and builds `codex-desktop-full`, validates the enabled-feature
 and Quick Chat patch report, and explicitly publishes the complete closure to
 Cachix. Only then does it commit the new immutable pin to builder `main`. A
-failure leaves `main` and every consumer on the previous known-green package
-and updates one reusable issue.
+candidate must descend from the currently pinned source commit, so a branch
+rewind or unrelated replacement history fails closed. A failure leaves `main`
+and every consumer on the previous known-green package and updates one reusable
+issue.
+
+Pushes authenticated with the repository `GITHUB_TOKEN` already avoid recursive
+workflow runs. The promotion commit also includes GitHub's `[skip ci]`
+instruction as defense in depth if its authentication method changes later,
+because the exact package was already evaluated, built, validated, and cached
+in that same trusted run. Ordinary pushes and manual dispatches keep their
+normal build behavior.
 
 The dedicated Nix profile may therefore follow builder `main`: a visible
 builder revision is already built and cached, while its own contract validation

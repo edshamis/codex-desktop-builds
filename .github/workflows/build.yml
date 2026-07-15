@@ -89,13 +89,13 @@ jobs:
       - name: Record package metadata
         if: steps.package_changes.outputs.changed == 'true'
         run: |
-          {
-            echo '## Codex Desktop package'
-            echo
-            echo '- Output: `.#codex-desktop-full`'
-            echo "- Revision: \`${GITHUB_SHA}\`"
-            echo '- Cachix publication: `true`'
-          } >> "$GITHUB_STEP_SUMMARY"
+          printf '%s\n' \
+            '## Codex Desktop package' \
+            '' \
+            "- Output: \`.#codex-desktop-full\`" \
+            "- Revision: \`${GITHUB_SHA}\`" \
+            "- Cachix publication: \`true\`" \
+            >> "$GITHUB_STEP_SUMMARY"
 
       - name: Record unchanged package
         if: steps.package_changes.outputs.changed != 'true'

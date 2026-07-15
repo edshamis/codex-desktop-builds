@@ -30,8 +30,11 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Test immutable source pin updater
-        run: node --test scripts/update-source-pin.test.js
+      - name: Test source promotion helpers
+        run: >-
+          node --test
+          scripts/update-source-pin.test.js
+          scripts/validate-source-advance.test.js
 
       - name: Detect a validated source update
         id: source
@@ -41,11 +44,7 @@ jobs:
           set -euo pipefail
 
           current_sha="$(node scripts/update-source-pin.js --read)"
-          latest_sha="$(git ls-remote --exit-code "$SOURCE_URL" "refs/heads/${SOURCE_BRANCH}" | awk 'NR == 1 { print $1 }')"
-          if [[ ! "$latest_sha" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "invalid private source branch commit: $latest_sha" >&2
-            exit 1
-          fi
+          latest_sha="$(node scripts/validate-source-advance.js "$SOURCE_URL" "$SOURCE_BRANCH" "$current_sha")"
 
           echo "current_sha=$current_sha" >> "$GITHUB_OUTPUT"
           echo "latest_sha=$latest_sha" >> "$GITHUB_OUTPUT"
@@ -149,7 +148,7 @@ jobs:
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add flake.nix flake.lock
           git diff --cached --check
-          git commit -m "Build Codex Desktop from ${SOURCE_SHA:0:7}"
+          git commit -m "Build Codex Desktop from ${SOURCE_SHA:0:7} [skip ci]"
           auth_header="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
           git -c http.https://github.com/.extraheader="AUTHORIZATION: basic ${auth_header}" \
             push origin HEAD:main
