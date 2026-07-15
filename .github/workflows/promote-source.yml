@@ -15,7 +15,6 @@ concurrency:
 
 env:
   CACHIX_CACHE_NAME: edshamis-codex-desktop
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   SOURCE_BRANCH: agent/private-quick-chat-window-zoom
   SOURCE_REPOSITORY: edshamis/codex-desktop-linux
 
@@ -25,16 +24,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           persist-credentials: false
 
       - name: Test source promotion helpers
-        run: >-
-          node --test
-          scripts/update-source-pin.test.js
-          scripts/validate-source-advance.test.js
+        run: node --test scripts/*.test.js
 
       - name: Detect a validated source update
         id: source
@@ -155,7 +151,7 @@ jobs:
 
       - name: Record promotion failure
         if: failure()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const title = "Automated Codex Desktop source promotion failed";
@@ -185,7 +181,7 @@ jobs:
 
       - name: Close resolved promotion failure
         if: success()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const title = "Automated Codex Desktop source promotion failed";

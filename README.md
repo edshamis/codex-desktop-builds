@@ -79,7 +79,12 @@ and retained previous generation provide the final local rollback boundary.
 
 2. Adjust `linuxFeatureIds` when the desired bundle changes.
 
-3. Run `nix flake check --no-build` locally.
+3. Run the source-promotion helper tests and evaluate the flake locally:
+
+   ```bash
+   node --test scripts/*.test.js
+   nix flake check --no-build
+   ```
 
 4. Push the change and wait for `Build Codex Desktop` to succeed on `main`, or
    manually dispatch `Promote validated private source`.
@@ -88,12 +93,13 @@ and retained previous generation provide the final local rollback boundary.
 
 6. Keep the prior consumer revision until the new app is verified.
 
-Pull requests evaluate the flake but do not receive the Cachix write token or
-run the expensive package build. Trusted pushes to `main` build only when
-`flake.nix` or `flake.lock` changes; manual build dispatches always rebuild.
-Scheduled source promotion is also trusted, but commits only after its candidate
-has already been built, validated, and explicitly published. Policy and
-documentation-only commits therefore stay cheap.
+Pull requests run every source-promotion helper test and evaluate the flake, but
+they do not receive the Cachix write token or run the expensive package build.
+Trusted pushes to `main` build only when `flake.nix` or `flake.lock` changes;
+manual build dispatches always rebuild. Scheduled source promotion is also
+trusted, but commits only after its candidate has already been built, validated,
+and explicitly published. Policy and documentation-only commits therefore stay
+cheap.
 
 ## Cachix
 

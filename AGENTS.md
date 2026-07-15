@@ -5,8 +5,9 @@
 - Keep the selected opt-ins centralized in `linuxFeatureIds` in `flake.nix`.
 - Preserve the stable `codex-desktop-full` package/app name so consumers do not
   change when the feature bundle changes.
-- Pull requests evaluate only. Expensive builds and Cachix writes belong to
-  trusted pushes to `main` or explicit workflow dispatches.
+- Pull requests run the source-promotion helper tests and evaluate the flake
+  only. Expensive builds and Cachix writes belong to trusted pushes to `main`
+  or explicit workflow dispatches.
 - Scheduled source promotion must build and validate the candidate, explicitly
   publish its closure to Cachix, and only then commit the immutable source pin
   to `main`. It must reject source rewinds or unrelated replacement history;
