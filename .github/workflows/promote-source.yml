@@ -102,15 +102,9 @@ jobs:
           set -euo pipefail
           patch_report="$OUTPUT_PATH/opt/codex-desktop/.codex-linux/patch-report.json"
           nix eval --json .#lib.linuxFeatureIds > expected-features.json
-          jq -e --slurpfile expected expected-features.json '
-            .enabledFeatures == $expected[0]
-            and any(
-              .patches[];
-              .name == "feature:quick-chat-window-zoom:quick-chat-window-zoom"
-              and (.status == "applied" or .status == "already-applied")
-              and .sourceKind == "feature"
-            )
-          ' "$patch_report" >/dev/null
+          node scripts/validate-feature-contract.js \
+            "$patch_report" \
+            expected-features.json
 
       - name: Configure Cachix publication
         if: steps.source.outputs.changed == 'true'
