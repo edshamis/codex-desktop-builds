@@ -51,7 +51,9 @@ polls the validated branch 30 minutes later.
 For each new source commit, the promotion workflow updates a temporary exact
 pin, evaluates and builds `codex-desktop-full`, validates the enabled-feature
 and Quick Chat patch report, and explicitly publishes the complete closure to
-Cachix. Only then does it commit the new immutable pin to builder `main`. A
+Cachix. The Quick Chat contract may be newly patched or already present in the
+upstream app; both are successful states. Only then does the workflow commit
+the new immutable pin to builder `main`. A
 candidate must descend from the currently pinned source commit, so a branch
 rewind or unrelated replacement history fails closed. A failure leaves `main`
 and every consumer on the previous known-green package and updates one reusable
