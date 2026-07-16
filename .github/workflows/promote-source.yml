@@ -107,7 +107,7 @@ jobs:
             and any(
               .patches[];
               .name == "feature:quick-chat-window-zoom:quick-chat-window-zoom"
-              and .status == "applied"
+              and (.status == "applied" or .status == "already-applied")
               and .sourceKind == "feature"
             )
           ' "$patch_report" >/dev/null
