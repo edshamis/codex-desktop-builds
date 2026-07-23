@@ -5,6 +5,13 @@ const fs = require("node:fs");
 
 const quickChatPatchName =
   "feature:quick-chat-window-zoom:quick-chat-window-zoom";
+const successfulFeatureStatuses = new Set(["applied", "already-applied"]);
+
+function featureIdFromPatchName(name) {
+  return typeof name === "string"
+    ? (name.match(/^feature:([^:]+):.+$/u)?.[1] ?? null)
+    : null;
+}
 
 function validateFeatureContract(report, expectedFeatures) {
   if (!Array.isArray(expectedFeatures)) {
@@ -17,7 +24,40 @@ function validateFeatureContract(report, expectedFeatures) {
     throw new Error("enabled feature list does not match the builder contract");
   }
 
-  const quickChatEntries = (report.patches ?? []).filter(
+  if (!Array.isArray(report.patches)) {
+    throw new Error("patch report must contain a patches array");
+  }
+
+  const featurePatchNames = new Set();
+  for (const entry of report.patches) {
+    const hasFeatureName =
+      typeof entry?.name === "string" && entry.name.startsWith("feature:");
+    if (!hasFeatureName && entry?.sourceKind !== "feature") {
+      continue;
+    }
+    const featureId = featureIdFromPatchName(entry.name);
+    if (featureId == null || !expectedFeatures.includes(featureId)) {
+      throw new Error(
+        `${entry.name} does not belong to an enabled feature in the builder contract`,
+      );
+    }
+    if (entry.sourceKind !== "feature") {
+      throw new Error(
+        `${entry.name} must report sourceKind feature; got ${entry.sourceKind ?? "unknown"}`,
+      );
+    }
+    if (!successfulFeatureStatuses.has(entry.status)) {
+      throw new Error(
+        `${entry.name} must report applied or already-applied; got ${entry.status ?? "unknown"}`,
+      );
+    }
+    if (featurePatchNames.has(entry.name)) {
+      throw new Error(`duplicate feature patch report entry: ${entry.name}`);
+    }
+    featurePatchNames.add(entry.name);
+  }
+
+  const quickChatEntries = report.patches.filter(
     (entry) => entry.name === quickChatPatchName,
   );
   if (quickChatEntries.length !== 1) {
@@ -60,4 +100,9 @@ if (require.main === module) {
   }
 }
 
-module.exports = { quickChatPatchName, validateFeatureContract };
+module.exports = {
+  featureIdFromPatchName,
+  quickChatPatchName,
+  successfulFeatureStatuses,
+  validateFeatureContract,
+};

@@ -32,6 +32,7 @@
 
     lib = {
       inherit linuxFeatureIds;
+      featureContractValidator = ./scripts/validate-feature-contract.js;
     };
 
     packages.${system} = {

@@ -2,7 +2,7 @@ name: Promote validated private source
 
 on:
   schedule:
-    - cron: "47 */6 * * *"
+    - cron: "47 * * * *"
   workflow_dispatch:
 
 permissions:

@@ -17,6 +17,10 @@ The stable consumer output is:
 packages.x86_64-linux.codex-desktop-full
 ```
 
+The matching feature-report validator is exported as
+`lib.featureContractValidator` so CI and local profile consumers enforce one
+shared contract implementation.
+
 The upstream Home Manager and NixOS modules are re-exported unchanged so a
 consumer can use the module integration while overriding its `package` option
 with this cached output.
@@ -46,16 +50,18 @@ nix run .#codex-desktop-full -- --new-instance
 The source fork merges `ilysenko/codex-desktop-linux:main` into its private
 feature branch every six hours and publishes that branch only after its focused
 feature tests, complete patcher suite, and Nix evaluation pass. This repository
-polls the validated branch 30 minutes later.
+polls the validated branch hourly (normally 30 minutes after the scheduled
+source sync), so direct private-feature fixes no longer wait for the next
+six-hour builder window.
 
 For each new source commit, the promotion workflow updates a temporary exact
-pin, evaluates and builds `codex-desktop-full`, validates the enabled-feature
-and Quick Chat patch report, and explicitly publishes the complete closure to
-Cachix. The private Quick Chat feature must report `applied` on that first
-package pass; `already-applied` is rejected because it can otherwise hide a
-semantic bundle-discovery miss. If upstream implements the complete behavior,
-the private feature must be reviewed and removed explicitly. Only then does the
-workflow commit the new immutable pin to builder `main`. A
+pin, evaluates and builds `codex-desktop-full`, rejects unsuccessful or unknown
+enabled-feature patch entries, requires the private Quick Chat feature to
+report `applied` on that first package pass, and explicitly publishes the
+complete closure to Cachix. Quick Chat `already-applied` is rejected because it
+can otherwise hide a semantic bundle-discovery miss. If upstream implements the
+complete behavior, the private feature must be reviewed and removed explicitly.
+Only then does the workflow commit the new immutable pin to builder `main`. A
 candidate must descend from the currently pinned source commit, so a branch
 rewind or unrelated replacement history fails closed. A failure leaves `main`
 and every consumer on the previous known-green package and updates one reusable
