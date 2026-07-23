@@ -2,7 +2,7 @@
   description = "Cached Codex Desktop Linux package for edshamis";
 
   # Private local-feature branch; keep this immutable and advance intentionally.
-  inputs.codex-desktop-linux.url = "github:edshamis/codex-desktop-linux/11353f4e12f5ff6b7be23e52588825ed1041367c";
+  inputs.codex-desktop-linux.url = "github:edshamis/codex-desktop-linux/86d98c484cb4a42782bef1d09e921ff0b82a152e";
 
   outputs = {
     self,
